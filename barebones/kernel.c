@@ -77,19 +77,40 @@ void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) {
 	terminal_buffer[index] = vga_entry(c, color);
 }
 
+/* move all rows up by shifting values in terminal_buffer by width*/
+void terminal_shift_rows_up() {
+    size_t y, x;
+
+    for (y = 0; y < VGA_HEIGHT; y++) {
+        for (x = 0; x < VGA_WIDTH; x++) {
+            const size_t index = y * VGA_WIDTH + x;
+            terminal_buffer[index] = terminal_buffer[index+VGA_WIDTH];
+        }
+    }
+}
+
 void terminal_putchar(char c) {
     /* handle newline char */
     if (c == '\n') {
-        ++terminal_row;
+		if (++terminal_row == VGA_HEIGHT) {
+            --terminal_row;
+            terminal_shift_rows_up();
+        }
         terminal_column = 0;
         return;
     }
 
+    /* terminal scrolling */
+    if (terminal_row == VGA_HEIGHT) {
+        terminal_shift_rows_up();
+        --terminal_row;
+    }
+
 	terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
+
 	if (++terminal_column == VGA_WIDTH) {
 		terminal_column = 0;
-		if (++terminal_row == VGA_HEIGHT)
-			terminal_row = 0;
+        ++terminal_row;
 	}
 }
 
@@ -106,6 +127,14 @@ void kernel_main(void) {
 	/* Initialize terminal interface */
 	terminal_initialize();
 
-	/* Newline support is left as an exercise. */
-	terminal_writestring("Hello,\nkernel World!\n");
+    /* test string for newline and scrolling */
+    char s[] = \
+        "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\n"
+        "n\no\np\nq\nr\ns\nt\nu\nv\nw\nx\ny\nz"
+        "zzzzzzzzzzzzzzzzzzzz"
+        "zzzzzzzzzzzzzzzzzzzz"
+        "zzzzzzzzzzzzzzzzzzzz"
+        "zzzzzzzzzzzzzzzzzzzz";
+
+	terminal_writestring(s);
 }
